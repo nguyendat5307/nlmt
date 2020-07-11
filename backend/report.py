@@ -5,12 +5,11 @@ from influxdb import DataFrameClient
 dbclient = DataFrameClient(host='127.0.0.1', port=8086, username='root', password='root', database='savina')
 
 def onemin():
+    upper = dbclient.query('select * from current order by time desc limit 1')['current'].index[0].strftime('%Y-%m-%dT%H:%M:%SZ')
     if len(dbclient.query('select count(*) from onemin').keys()) == 0:
-        upper = dbclient.query('select * from current order by time desc limit 1')['current'].index[0].strftime('%Y-%m-%dT%H:%M:%SZ')
         dbclient.query('select first(value),min(value),mean(value),max(value),last(value) into onemin from current where time <= $upper group by *,time(1m)', bind_params={'upper':upper})
     else:
         lower = dbclient.query('select * from onemin order by time desc limit 1')['onemin'].index[0].strftime('%Y-%m-%dT%H:%M:%SZ')
-        upper = dbclient.query('select * from current order by time desc limit 1')['current'].index[0].strftime('%Y-%m-%dT%H:%M:%SZ')
         dbclient.query('select first(value),min(value),mean(value),max(value),last(value) into onemin from current where time >= $lower and time <= $upper group by *,time(1m)', bind_params={'lower':lower, 'upper':upper})
 
 def fifteenmins():
