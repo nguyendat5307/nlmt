@@ -16,40 +16,27 @@ def on_message(client, userdata, msg):
     data = objpayload["d"]
     data = pd.DataFrame(data)
     data[['device', 'parameter']] = data.tag.str.split(':', expand=True)
-    data['time'] = datetime.datetime.now()
+    data['time'] = datetime.datetime.utcnow()
     data.set_index('time', inplace=True)
     data['topic'] = topic
     data[['admin', 'org', 'group', 'station', 'gateway']] = data.topic.str.split('/', expand=True)
     data = data.drop(['topic','tag', 'admin', 'gateway'], axis=1)
-    dbclient.write_points(data, 'current', field_columns=['value'])
+    write_api.write(bucket, record=data, data_frame_measurement_name='last', data_frame_tag_columns=['org', 'group', 'station', 'device', 'parameter'])
 
-# You can generate a Token from the "Tokens Tab" in the UI
-token = "tLjGK3kL71jysgnQ41FBVmE3k7tycSsp2me2qam9W7AQCLnJVx0b9YP65fA2DNEdNu76II6tG-s1hlbbN1NfTA=="
-org = "mind"
-bucket = "nlmt"
-
+# create indluxdb-client
+token = "vawyGIZTxacc86v1z3CnW_s87RvCOzdDld10VQosQsokCjGt35biTlNJ7-zWwrVB8UYNiTHj4vy_Qh_s7Aii5g=="
+org = "savina"
+bucket = "realtime"
 client = InfluxDBClient(url="http://localhost:9999", token=token, org=org)
 write_api = client.write_api(write_options=SYNCHRONOUS)
 query_api = client.query_api()
 
-data = "mem,host=host1 used_percent=21.43234543"
-write_api.write(bucket, org, data)
-
-query = 'from(bucket: \"{}\") |> range(start: -1h)'.format("nlmt")
-queryinto = 'from(bucket: "nlmt") |> range(start: -10h) |> window(every: 1h) |> '
-data_frame = query_api.query_data_frame(query)
-
-print(data_frame)
-
-
-
-
-
+# create mqtt-client
 client = mqtt.Client()
 client.username_pw_set(username="mind", password="123")
 client.on_connect = on_connect
 client.on_message = on_message
 
+# connect mqtt and loop forever
 client.connect("nangluong.iotmind.vn", 16766, 60)
 client.loop_forever()
-
